@@ -38,10 +38,8 @@ regd_users.post("/login", (req, res) => {
       { expiresIn: 60 * 60 }
     );
 
-    req.session.authorization = {
-      accessToken,
-      username,
-    };
+    req.session.authorization = { accessToken };
+    req.session.username = username;
 
     return res.status(200).send("User successfully logged in.");
   } else {
@@ -52,8 +50,10 @@ regd_users.post("/login", (req, res) => {
 // Add a book review
 regd_users.put("/auth/review/:isbn", (req, res) => {
   const isbn = req.params.isbn;
-  const reviewText = req.query.review;
+  const reviewText = req.body.review;
   const username = req.session.username;
+
+  console.log(isbn, reviewText, username);
 
   if (!reviewText || !username) {
     return res
@@ -61,16 +61,16 @@ regd_users.put("/auth/review/:isbn", (req, res) => {
       .json({ message: "Review text or username missing." });
   }
 
-  const existingUserReview = books[isbn].reviews.find(
-    (r) => r.username === username
-  );
+  if (!books[isbn]) {
+    return res.status(404).json({ message: "Book not found." });
+  }
 
-  if (existingUserReview) {
-    existingUserReview.review = reviewText;
-    res.status(200).json({ message: "Review updated successfully" });
+  if (books[isbn].reviews[username]) {
+    books[isbn].reviews[username] = reviewText;
+    return res.status(200).json({ message: "Review updated successfully" });
   } else {
-    books[isbn].reviews.push({ username: username, review: reviewText });
-    res.status(200).json({ message: "Review added successfully" });
+    books[isbn].reviews[username] = reviewText;
+    return res.status(200).json({ message: "Review added successfully" });
   }
 });
 
@@ -82,19 +82,15 @@ regd_users.delete("/auth/review/:isbn", (req, res) => {
     return res.status(401).json({ message: "Unauthorized access" });
   }
 
-  if (books[isbn] && books[isbn].reviews) {
-    const reviewsCount = books[isbn].reviews.length;
-    books[isbn].reviews = books[isbn].reviews.filter(
-      (r) => r.username !== username
-    );
+  if (!books[isbn]) {
+    return res.status(404).json({ message: "Book not found." });
+  }
 
-    if (books[isbn].reviews.length < reviewsCount) {
-      res.status(200).json({ message: "Review deleted successfully" });
-    } else {
-      res.status(404).json({ message: "Review not found for this user" });
-    }
+  if (books[isbn].reviews && books[isbn].reviews[username]) {
+    delete books[isbn].reviews[username];
+    return res.status(200).json({ message: "Review deleted successfully" });
   } else {
-    res.status(404).json({ message: "No reviews found for this ISBN" });
+    return res.status(404).json({ message: "Review not found for this user" });
   }
 });
 

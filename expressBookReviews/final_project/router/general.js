@@ -14,7 +14,7 @@ const doesExist = (username) => {
 public_users.post("/register", (req, res) => {
   const username = req.body.username;
   const password = req.body.password;
-
+  console.log(username, password);
   if (username && password) {
     if (!doesExist(username)) {
       users.push({
@@ -22,9 +22,9 @@ public_users.post("/register", (req, res) => {
         password: password,
       });
 
-      res.status(203).json({ message: "User successfully registered." });
+      return res.status(203).json({ message: "User successfully registered." });
     } else {
-      res.status(401).json({ message: "User already exists." });
+      return res.status(401).json({ message: "User already exists." });
     }
 
     return res.status(404).json({ message: "Provided data is incorrect." });
